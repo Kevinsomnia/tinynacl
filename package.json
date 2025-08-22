@@ -1,6 +1,7 @@
 {
   "name": "kevinsomnia.tinynacl",
   "displayName": "TinyNaCl",
+  "author": "Kevinsomnia",
   "version": "1.0.0",
   "description": "Small package for verifying Ed25519 digital signatures signed by a server"
 }
