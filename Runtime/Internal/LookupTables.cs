@@ -48,5 +48,71 @@ namespace TinyNaCl.Internal
         internal static FieldElement d = new(-10913610, 13857413, -15372611, 6949391, 114729, -8787816, -6275908, -3247719, -18696448, -12055116);
         internal static FieldElement d2 = new(-21827239, -5839606, -30745221, 13898782, 229458, 15978800, -12551817, -6495438, 29715968, 9444199);
         internal static FieldElement sqrtm1 = new(-32595792, -7943725, 9377950, 3500415, 12389472, -272473, -25146209, -2005654, 326686, 11406482);
+
+        // Constant-time scalarmult-base table. Base[i][j] = (j + 1) * 256^i * B in precomp form.
+        // Populated at class load by repeatedly adding/doubling the canonical base point B.
+        // Cost: 32 rows * (7 adds + 8 doublings + 8 inversions) ≈ a few milliseconds, once per app load.
+        internal static readonly GroupElementPreComp[][] Base = BuildBaseTable();
+
+        private static GroupElementPreComp[][] BuildBaseTable()
+        {
+            // Encoding of B per RFC 8032: y = 4/5 mod p, encoded little-endian with sign-of-x in top bit.
+            byte[] encoding = {
+                0x58, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66,
+                0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66,
+                0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66,
+                0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66
+            };
+
+            // ge_frombytes_negate_vartime returns -B; undo by negating X and T to get B.
+            GroupOperations.ge_frombytes_negate_vartime(out GroupElementP3 negB, encoding, 0);
+            GroupElementP3 B;
+            FieldOperations.fe_neg(out B.X, ref negB.X);
+            B.Y = negB.Y;
+            B.Z = negB.Z;
+            FieldOperations.fe_neg(out B.T, ref negB.T);
+
+            var table = new GroupElementPreComp[32][];
+            GroupElementP3 current = B; // 256^i * B at iteration i
+
+            for (int i = 0; i < 32; i++)
+            {
+                table[i] = new GroupElementPreComp[8];
+                GroupElementP3 multiple = current;
+                table[i][0] = ToPreComp(ref multiple);
+
+                for (int j = 1; j < 8; j++)
+                {
+                    GroupOperations.ge_p3_to_cached(out GroupElementCached cached, ref current);
+                    GroupOperations.ge_add(out GroupElementP1P1 sum, ref multiple, ref cached);
+                    GroupOperations.ge_p1p1_to_p3(out multiple, ref sum);
+                    table[i][j] = ToPreComp(ref multiple);
+                }
+
+                // current *= 256 via 8 doublings.
+                for (int k = 0; k < 8; k++)
+                {
+                    GroupOperations.ge_p3_dbl(out GroupElementP1P1 dbl, ref current);
+                    GroupOperations.ge_p1p1_to_p3(out current, ref dbl);
+                }
+            }
+
+            return table;
+        }
+
+        private static GroupElementPreComp ToPreComp(ref GroupElementP3 p)
+        {
+            // Project to affine, then build (y+x, y-x, 2*d*x*y).
+            FieldOperations.fe_invert(out FieldElement zInv, ref p.Z);
+            FieldOperations.fe_mul(out FieldElement x, ref p.X, ref zInv);
+            FieldOperations.fe_mul(out FieldElement y, ref p.Y, ref zInv);
+
+            GroupElementPreComp r;
+            FieldOperations.fe_add(out r.yplusx, ref y, ref x);
+            FieldOperations.fe_sub(out r.yminusx, ref y, ref x);
+            FieldOperations.fe_mul(out FieldElement xy, ref x, ref y);
+            FieldOperations.fe_mul(out r.xy2d, ref xy, ref d2);
+            return r;
+        }
     }
 }

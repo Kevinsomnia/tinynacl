@@ -458,6 +458,25 @@ namespace TinyNaCl.Internal
         }
 
         /// <summary>
+        /// Constant-time conditional move. If b = 1, replaces f with g. If b = 0, leaves f unchanged.
+        /// Requires b in {0, 1}.
+        /// </summary>
+        internal static void fe_cmov(ref FieldElement f, ref FieldElement g, int b)
+        {
+            int mask = -b;
+            f.x0 ^= (f.x0 ^ g.x0) & mask;
+            f.x1 ^= (f.x1 ^ g.x1) & mask;
+            f.x2 ^= (f.x2 ^ g.x2) & mask;
+            f.x3 ^= (f.x3 ^ g.x3) & mask;
+            f.x4 ^= (f.x4 ^ g.x4) & mask;
+            f.x5 ^= (f.x5 ^ g.x5) & mask;
+            f.x6 ^= (f.x6 ^ g.x6) & mask;
+            f.x7 ^= (f.x7 ^ g.x7) & mask;
+            f.x8 ^= (f.x8 ^ g.x8) & mask;
+            f.x9 ^= (f.x9 ^ g.x9) & mask;
+        }
+
+        /// <summary>
 		/// h = -f
 		/// </summary>
         internal static void fe_neg(out FieldElement h, ref FieldElement f)

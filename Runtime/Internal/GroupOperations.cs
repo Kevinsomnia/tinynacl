@@ -315,5 +315,130 @@ namespace TinyNaCl.Internal
             FieldOperations.fe_tobytes(s, offset, ref y);
             s[offset + 31] ^= (byte)(FieldOperations.fe_isnegative(ref x) << 7);
         }
+
+        public static void ge_p3_tobytes(byte[] s, int offset, ref GroupElementP3 h)
+        {
+            FieldOperations.fe_invert(out FieldElement recip, ref h.Z);
+            FieldOperations.fe_mul(out FieldElement x, ref h.X, ref recip);
+            FieldOperations.fe_mul(out FieldElement y, ref h.Y, ref recip);
+            FieldOperations.fe_tobytes(s, offset, ref y);
+            s[offset + 31] ^= (byte)(FieldOperations.fe_isnegative(ref x) << 7);
+        }
+
+        public static void ge_p3_0(out GroupElementP3 h)
+        {
+            h.X = default;
+            FieldOperations.fe_1(out h.Y);
+            FieldOperations.fe_1(out h.Z);
+            h.T = default;
+        }
+
+        internal static void ge_precomp_0(out GroupElementPreComp h)
+        {
+            FieldOperations.fe_1(out h.yplusx);
+            FieldOperations.fe_1(out h.yminusx);
+            h.xy2d = default;
+        }
+
+        private static void cmov(ref GroupElementPreComp t, ref GroupElementPreComp u, int b)
+        {
+            FieldOperations.fe_cmov(ref t.yplusx, ref u.yplusx, b);
+            FieldOperations.fe_cmov(ref t.yminusx, ref u.yminusx, b);
+            FieldOperations.fe_cmov(ref t.xy2d, ref u.xy2d, b);
+        }
+
+        // Returns 1 if b == c, else 0. Inputs are signed bytes in range [-8, 8].
+        private static byte equal(int b, int c)
+        {
+            uint x = (uint)(b ^ c);
+            x -= 1;
+            return (byte)((x >> 31) & 1);
+        }
+
+        // Returns 1 if b < 0, else 0.
+        private static byte negative(int b)
+        {
+            return (byte)(((uint)b >> 31) & 1);
+        }
+
+        // Constant-time selection of LookupTables.Base[pos][|b|-1], with conditional negation if b<0.
+        // b is in [-8, 8]. Result is identity when b == 0.
+        private static void select(out GroupElementPreComp t, int pos, int b)
+        {
+            int bnegative = negative(b);
+            int babs = b - (((-bnegative) & b) << 1);
+
+            ge_precomp_0(out t);
+            var row = LookupTables.Base[pos];
+            cmov(ref t, ref row[0], equal(babs, 1));
+            cmov(ref t, ref row[1], equal(babs, 2));
+            cmov(ref t, ref row[2], equal(babs, 3));
+            cmov(ref t, ref row[3], equal(babs, 4));
+            cmov(ref t, ref row[4], equal(babs, 5));
+            cmov(ref t, ref row[5], equal(babs, 6));
+            cmov(ref t, ref row[6], equal(babs, 7));
+            cmov(ref t, ref row[7], equal(babs, 8));
+
+            GroupElementPreComp minust;
+            minust.yplusx = t.yminusx;
+            minust.yminusx = t.yplusx;
+            FieldOperations.fe_neg(out minust.xy2d, ref t.xy2d);
+            cmov(ref t, ref minust, bnegative);
+        }
+
+        /// <summary>
+        /// h = a * B, where B is the Ed25519 base point and a is a 32-byte little-endian scalar.
+        /// Constant-time with respect to a.
+        /// </summary>
+        public static void ge_scalarmult_base(out GroupElementP3 h, byte[] a, int aOffset)
+        {
+            // Decompose a into 64 signed 4-bit digits, e[i] in [-8, 7].
+            sbyte[] e = new sbyte[64];
+            for (int i = 0; i < 32; i++)
+            {
+                e[2 * i] = (sbyte)(a[aOffset + i] & 15);
+                e[2 * i + 1] = (sbyte)((a[aOffset + i] >> 4) & 15);
+            }
+            sbyte carry = 0;
+            for (int i = 0; i < 63; i++)
+            {
+                e[i] += carry;
+                carry = (sbyte)((e[i] + 8) >> 4);
+                e[i] -= (sbyte)(carry << 4);
+            }
+            e[63] += carry;
+
+            GroupElementP1P1 r;
+            GroupElementP2 s;
+            GroupElementPreComp t;
+
+            ge_p3_0(out h);
+
+            // Odd digits: accumulate 16^(2i+1) * e[2i+1] * B.
+            for (int i = 1; i < 64; i += 2)
+            {
+                select(out t, i / 2, e[i]);
+                ge_madd(out r, ref h, ref t);
+                ge_p1p1_to_p3(out h, ref r);
+            }
+
+            // h *= 16, so odd-digit contributions land at the right place.
+            ge_p3_dbl(out r, ref h);
+            ge_p1p1_to_p2(out s, ref r);
+            ge_p2_dbl(out r, ref s);
+            ge_p1p1_to_p2(out s, ref r);
+            ge_p2_dbl(out r, ref s);
+            ge_p1p1_to_p2(out s, ref r);
+            ge_p2_dbl(out r, ref s);
+            ge_p1p1_to_p3(out h, ref r);
+
+            // Even digits.
+            for (int i = 0; i < 64; i += 2)
+            {
+                select(out t, i / 2, e[i]);
+                ge_madd(out r, ref h, ref t);
+                ge_p1p1_to_p3(out h, ref r);
+            }
+        }
     }
 }
