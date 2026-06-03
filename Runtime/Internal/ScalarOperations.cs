@@ -1,7 +1,10 @@
+using System.Runtime.CompilerServices;
+
 namespace TinyNaCl.Internal
 {
     internal static class ScalarOperations
     {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         static long load_3(byte[] input, int offset)
         {
             long result = input[offset + 0];
@@ -10,6 +13,7 @@ namespace TinyNaCl.Internal
             return result;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         static long load_4(byte[] input, int offset)
         {
             long result = input[offset + 0];

@@ -1,7 +1,10 @@
+using System.Runtime.CompilerServices;
+
 namespace TinyNaCl.Internal
 {
     internal static class ByteIntegerConverter
     {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static ulong LoadBigEndian64(byte[] buf, int offset)
         {
             return
@@ -15,6 +18,7 @@ namespace TinyNaCl.Internal
                 | (((ulong)buf[offset + 0]) << 56);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void StoreBigEndian64(byte[] buf, int offset, ulong value)
         {
             buf[offset + 7] = unchecked((byte)value);

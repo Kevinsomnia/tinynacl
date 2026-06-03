@@ -17,15 +17,10 @@ namespace TinyNaCl
         /// <returns>True if sequences are equal</returns>
         public static bool ConstantTimeEquals(byte[] x, byte[] y, int length)
         {
-            return InternalConstantTimeEquals(x, y, length) != 0;
-        }
-
-        private static uint InternalConstantTimeEquals(byte[] x, byte[] y, int length)
-        {
             int differentbits = 0;
             for (int i = 0; i < length; i++)
                 differentbits |= x[i] ^ y[i];
-            return 1 & (unchecked((uint)differentbits - 1) >> 8);
+            return (1 & (unchecked((uint)differentbits - 1) >> 8)) != 0;
         }
 
         /// <summary>

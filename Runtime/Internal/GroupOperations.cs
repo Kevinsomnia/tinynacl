@@ -1,7 +1,10 @@
+using System.Runtime.CompilerServices;
+
 namespace TinyNaCl.Internal
 {
     internal static class GroupOperations
     {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void ge_p2_0(out GroupElementP2 h)
         {
             h.X = default;
@@ -27,10 +30,10 @@ namespace TinyNaCl.Internal
             FieldOperations.fe_sub(out r.T, ref t0, ref r.T);
         }
 
-        private static void slide(sbyte[] r, byte[] a)
+        private static void slide(sbyte[] r, byte[] a, int aOffset)
         {
             for (int i = 0; i < 256; ++i)
-                r[i] = (sbyte)(1 & (a[i >> 3] >> (i & 7)));
+                r[i] = (sbyte)(1 & (a[aOffset + (i >> 3)] >> (i & 7)));
 
             for (int i = 0; i < 256; ++i)
             {
@@ -66,7 +69,7 @@ namespace TinyNaCl.Internal
             }
         }
 
-        public static void ge_double_scalarmult_vartime(out GroupElementP2 r, byte[] a, ref GroupElementP3 A, byte[] b)
+        public static void ge_double_scalarmult_vartime(out GroupElementP2 r, byte[] a, ref GroupElementP3 A, byte[] b, int bOffset)
         {
             GroupElementPreComp[] Bi = LookupTables.Base2;
             // todo: Perhaps remove these allocations?
@@ -78,8 +81,8 @@ namespace TinyNaCl.Internal
             GroupElementP3 A2;
             int i;
 
-            slide(aslide, a);
-            slide(bslide, b);
+            slide(aslide, a, 0);
+            slide(bslide, b, bOffset);
 
             ge_p3_to_cached(out Ai[0], ref A);
             ge_p3_dbl(out t, ref A);
@@ -218,6 +221,7 @@ namespace TinyNaCl.Internal
         /// <summary>
         /// r = p
         /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void ge_p1p1_to_p2(out GroupElementP2 r, ref GroupElementP1P1 p)
         {
             FieldOperations.fe_mul(out r.X, ref p.X, ref p.T);
@@ -228,6 +232,7 @@ namespace TinyNaCl.Internal
         /// <summary>
         /// r = p
         /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void ge_p1p1_to_p3(out GroupElementP3 r, ref GroupElementP1P1 p)
         {
             FieldOperations.fe_mul(out r.X, ref p.X, ref p.T);
@@ -264,6 +269,7 @@ namespace TinyNaCl.Internal
         ///<summary>
         /// r = p
         ///</summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void ge_p3_to_cached(out GroupElementCached r, ref GroupElementP3 p)
         {
             FieldOperations.fe_add(out r.YplusX, ref p.Y, ref p.X);
@@ -275,6 +281,7 @@ namespace TinyNaCl.Internal
         ///<summary>
         /// r = p
         ///</summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void ge_p3_to_p2(out GroupElementP2 r, ref GroupElementP3 p)
         {
             r.X = p.X;

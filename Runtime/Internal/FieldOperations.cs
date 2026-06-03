@@ -1,7 +1,10 @@
+using System.Runtime.CompilerServices;
+
 namespace TinyNaCl.Internal
 {
     internal static class FieldOperations
     {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void fe_1(out FieldElement h)
         {
             h = default;
@@ -57,6 +60,7 @@ namespace TinyNaCl.Internal
             h.x9 = h9;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static long load_3(byte[] data, int offset)
         {
             uint result;
@@ -66,6 +70,7 @@ namespace TinyNaCl.Internal
             return (long)(ulong)result;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static long load_4(byte[] data, int offset)
         {
             uint result;
