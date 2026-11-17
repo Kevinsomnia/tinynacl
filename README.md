@@ -1,14 +1,14 @@
-## TinyNaCl
+# TinyNaCl
 
 A **N**etworking **a**nd **C**rytography **L**ibrary, but only a tiny part of it.
 
 This is a Unity package containing Ed25519 signature verification and signing, which can be used to verify authenticity and integrity of game files. Package is meant to be very bare-bones, a lot of .NET libraries out there contain too much bloat.
 
-### Installation
+## Installation
 
 Use the package manager within Unity and add a package via Git URL. Only tested with Unity 6.
 
-### Usage
+## Usage
 
 Verifying an Ed25519 signature
 
@@ -41,6 +41,6 @@ to a `byte[]` before calling `Sign` / `PublicKeyFromSeed`.
 > or a server-side service. Ship only the resulting `signature` and
 > `publicKey` to clients, and use `Verify` there.
 
-### Credits
+## Credits
 
 Adapted from https://github.com/CryptoManiac/Ed25519 and https://github.com/CodesInChaos/Chaos.NaCl.
